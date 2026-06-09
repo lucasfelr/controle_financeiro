@@ -51,21 +51,46 @@ class DetalhesGrupoScreen extends StatelessWidget {
                       );
                     },
                     onLongPress: () {
-                      showDialog(
+                      showModalBottomSheet(
                         context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Deletar Conta'),
-                          content: Text('Tem certeza que deseja apagar a conta "${conta.nome}"? Isso apagará todo o histórico de transações dela.'),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-                            TextButton(
-                              onPressed: () {
-                                provider.deletarConta(conta.id);
-                                Navigator.pop(context);
-                              },
-                              child: const Text('Deletar', style: TextStyle(color: Colors.red)),
-                            ),
-                          ],
+                        builder: (context) => SafeArea(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ListTile(
+                                leading: const Icon(Icons.edit, color: Colors.blue),
+                                title: const Text('Editar Conta'),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  _abrirDialogEditarConta(context, conta, context.read<FinanceProvider>());
+                                },
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.delete, color: Colors.red),
+                                title: const Text('Deletar Conta'),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text('Deletar Conta'),
+                                      content: Text('Apagar a conta "${conta.nome}" e seu histórico?'),
+                                      actions: [
+                                        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+                                        TextButton(
+                                          onPressed: () {
+                                            context.read<FinanceProvider>().deletarConta(conta.id);
+                                            Navigator.pop(context);
+                                          },
+                                          child: const Text('Deletar', style: TextStyle(color: Colors.red)),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },
@@ -125,4 +150,41 @@ class DetalhesGrupoScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+void _abrirDialogEditarConta(BuildContext context, Conta conta, FinanceProvider provider) {
+  final nomeController = TextEditingController(text: conta.nome);
+  final saldoController = TextEditingController(text: conta.saldoInicial.toString());
+
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Editar Conta'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(controller: nomeController, decoration: const InputDecoration(labelText: 'Nome da Conta')),
+          const SizedBox(height: 8),
+          TextField(
+            controller: saldoController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'Saldo Inicial (R\$)'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+        ElevatedButton(
+          onPressed: () {
+            if (nomeController.text.isNotEmpty) {
+              final novoSaldo = double.tryParse(saldoController.text) ?? conta.saldoInicial;
+              provider.editarConta(conta.id, nomeController.text, novoSaldo);
+              Navigator.pop(context);
+            }
+          },
+          child: const Text('Salvar'),
+        ),
+      ],
+    ),
+  );
 }

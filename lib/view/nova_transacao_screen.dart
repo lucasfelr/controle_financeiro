@@ -4,8 +4,13 @@ import '../provider/finance_provider.dart';
 
 class NovaTransacaoScreen extends StatefulWidget {
   final FinanceProvider financeProvider;
+  final int? contaId;
 
-  const NovaTransacaoScreen({Key? key, required this.financeProvider}) : super(key: key);
+  const NovaTransacaoScreen({
+    Key? key, 
+    required this.financeProvider, 
+    this.contaId,
+  }) : super(key: key);
 
   @override
   State<NovaTransacaoScreen> createState() => _NovaTransacaoScreenState();
@@ -14,8 +19,7 @@ class NovaTransacaoScreen extends StatefulWidget {
 class _NovaTransacaoScreenState extends State<NovaTransacaoScreen> {
   final _formKey = GlobalKey<FormState>();
   
-  // Controladores de texto
-  final _nomeController = TextEditingController(); // AQUI ESTÁ O CONTROLADOR FALTANDO!
+  final _nomeController = TextEditingController();
   final _valorController = TextEditingController();
   final _tagController = TextEditingController();
   final _parcelasController = TextEditingController(text: '2');
@@ -26,14 +30,37 @@ class _NovaTransacaoScreenState extends State<NovaTransacaoScreen> {
   bool _isParcelado = false;
   bool _definirPorValorTotal = true; 
 
+  // --- NOVA VARIÁVEL DE ESTADO PARA A DATA ---
+  DateTime? _dataSelecionada; 
+
+  @override
+  void initState() {
+    super.initState();
+    _contaSelecionadaId = widget.contaId;
+  }
+
   @override
   void dispose() {
-    // É importante limpar a memória quando a tela é fechada
     _nomeController.dispose();
     _valorController.dispose();
     _tagController.dispose();
     _parcelasController.dispose();
     super.dispose();
+  }
+
+  // --- FUNÇÃO PARA ABRIR O CALENDÁRIO NATIVO ---
+  Future<void> _escolherData() async {
+    final DateTime? selecionada = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (selecionada != null) {
+      setState(() {
+        _dataSelecionada = selecionada;
+      });
+    }
   }
 
   void _salvarFormulario() {
@@ -44,6 +71,9 @@ class _NovaTransacaoScreenState extends State<NovaTransacaoScreen> {
     final tag = _tagController.text;
     final contaId = _contaSelecionadaId!;
 
+    // Define a data final: se escolheu uma, usa ela; senão, usa a data atual (hoje)
+    final dataFinal = _dataSelecionada ?? DateTime.now();
+
     if (_tipoSelecionado == TipoTransacao.gasto && _isParcelado) {
       final qtdParcelas = int.parse(_parcelasController.text);
       
@@ -51,7 +81,7 @@ class _NovaTransacaoScreenState extends State<NovaTransacaoScreen> {
         contaId: contaId,
         nome: nome,
         tag: tag,
-        dataInicial: DateTime.now(),
+        dataInicial: dataFinal, // <-- DATA SELECIONADA AQUI
         quantidadeParcelas: qtdParcelas,
         valorTotal: _definirPorValorTotal ? valor : null,
         valorParcela: !_definirPorValorTotal ? valor : null,
@@ -63,6 +93,7 @@ class _NovaTransacaoScreenState extends State<NovaTransacaoScreen> {
         tipo: _tipoSelecionado,
         valor: valor,
         tag: tag,
+        data: _dataSelecionada, // <-- PASSANDO A DATA SELECIONADA (Pode ser nula)
       );
     }
 
@@ -105,18 +136,19 @@ class _NovaTransacaoScreenState extends State<NovaTransacaoScreen> {
               ),
               const SizedBox(height: 16),
 
-              DropdownButtonFormField<int>(
-                value: _contaSelecionadaId,
-                decoration: const InputDecoration(labelText: 'Selecione a Conta', border: OutlineInputBorder()),
-                items: contas.map((conta) {
-                  return DropdownMenuItem<int>(value: conta.id, child: Text(conta.nome));
-                }).toList(),
-                onChanged: (id) => setState(() => _contaSelecionadaId = id),
-                validator: (value) => value == null ? 'Selecione uma conta' : null,
-              ),
-              const SizedBox(height: 16),
+              if (widget.contaId == null) ...[
+                DropdownButtonFormField<int>(
+                  value: _contaSelecionadaId,
+                  decoration: const InputDecoration(labelText: 'Selecione a Conta', border: OutlineInputBorder()),
+                  items: contas.map((conta) {
+                    return DropdownMenuItem<int>(value: conta.id, child: Text(conta.nome));
+                  }).toList(),
+                  onChanged: (id) => setState(() => _contaSelecionadaId = id),
+                  validator: (value) => value == null ? 'Selecione uma conta' : null,
+                ),
+                const SizedBox(height: 16),
+              ],
 
-              // Novo campo na tela para digitar o Nome/Descrição
               TextFormField(
                 controller: _nomeController,
                 decoration: const InputDecoration(labelText: 'Descrição (Ex: Mercado, Uber)', border: OutlineInputBorder()),
@@ -141,6 +173,36 @@ class _NovaTransacaoScreenState extends State<NovaTransacaoScreen> {
                 validator: (value) => (value == null || value.isEmpty) ? 'Insira uma tag' : null,
               ),
               const SizedBox(height: 16),
+
+              // --- NOVO CAMPO VISUAL DE SELEÇÃO DE DATA ---
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _escolherData,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        alignment: Alignment.centerLeft,
+                      ),
+                      icon: const Icon(Icons.calendar_today),
+                      label: Text(
+                        _dataSelecionada == null
+                            ? 'Data: Hoje (Automática)'
+                            : 'Data: ${_dataSelecionada!.day}/${_dataSelecionada!.month}/${_dataSelecionada!.year}',
+                        style: const TextStyle(fontSize: 15),
+                      ),
+                    ),
+                  ),
+                  if (_dataSelecionada != null)
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.red),
+                      tooltip: 'Resetar para a data de hoje',
+                      onPressed: () => setState(() => _dataSelecionada = null),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // --------------------------------------------
 
               if (_tipoSelecionado == TipoTransacao.gasto) ...[
                 CheckboxListTile(

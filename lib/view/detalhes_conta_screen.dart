@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../provider/finance_provider.dart';
 import '../model/banco_de_dados.dart';
+import 'nova_transacao_screen.dart';
 
 class DetalhesContaScreen extends StatelessWidget {
   final Conta conta;
@@ -81,11 +82,36 @@ class DetalhesContaScreen extends StatelessWidget {
                           ),
                         ),
                         onLongPress: () {
-                          _mostrarDialogExclusao(
+                          showModalBottomSheet(
                             context: context,
-                            titulo: 'Deletar Transação',
-                            mensagem: 'Tem certeza que deseja apagar a transação "${t.nome}"?',
-                            onConfirmar: () => provider.deletarTransacao(t.id),
+                            builder: (context) => SafeArea(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ListTile(
+                                    leading: const Icon(Icons.edit, color: Colors.blue),
+                                    title: const Text('Editar Transação'),
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      _abrirDialogEditarTransacao(context, t, provider);
+                                    },
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.delete, color: Colors.red),
+                                    title: const Text('Deletar Transação'),
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      _mostrarDialogExclusao( // Aquela função que você já tinha colocado
+                                        context: context,
+                                        titulo: 'Deletar Transação',
+                                        mensagem: 'Tem certeza que deseja apagar "${t.nome}"?',
+                                        onConfirmar: () => provider.deletarTransacao(t.id),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
                           );
                         },
                       );
@@ -93,6 +119,21 @@ class DetalhesContaScreen extends StatelessWidget {
                   ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        tooltip: 'Adicionar Transação nesta conta',
+        child: const Icon(Icons.add),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => NovaTransacaoScreen(
+                financeProvider: provider,
+                contaId: conta.id, // <-- Passando o ID da conta atual
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -123,5 +164,82 @@ void _mostrarDialogExclusao({
         ),
       ],
     ),
+  );
+}
+
+void _abrirDialogEditarTransacao(BuildContext context, Transacao t, FinanceProvider provider) {
+  final nomeController = TextEditingController(text: t.nome);
+  final valorController = TextEditingController(text: t.valor.toString());
+  final tagController = TextEditingController(text: t.tag);
+  
+  // Inicia com a data atual da transação salva no banco
+  DateTime dataSelecionada = t.data;
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      // O StatefulBuilder permite atualizar variáveis dentro de um Dialog aberto
+      return StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            title: const Text('Editar Transação'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: nomeController, decoration: const InputDecoration(labelText: 'Descrição')),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: valorController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Valor (R\$)'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(controller: tagController, decoration: const InputDecoration(labelText: 'Tag (ex: Lazer)')),
+                  const SizedBox(height: 16),
+                  
+                  // Novo botão de editar a data
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final DateTime? novaData = await showDatePicker(
+                        context: context,
+                        initialDate: dataSelecionada,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (novaData != null) {
+                        setStateDialog(() {
+                          dataSelecionada = novaData; // Atualiza o texto do botão
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.calendar_today, size: 18),
+                    label: Text('Data: ${dataSelecionada.day}/${dataSelecionada.month}/${dataSelecionada.year}'),
+                    style: OutlinedButton.styleFrom(
+                      alignment: Alignment.centerLeft,
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+              ElevatedButton(
+                onPressed: () {
+                  if (nomeController.text.isNotEmpty && tagController.text.isNotEmpty) {
+                    final novoValor = double.tryParse(valorController.text) ?? t.valor;
+                    // Envia a data selecionada para o provider
+                    provider.editarTransacao(t.id, nomeController.text, novoValor, tagController.text, dataSelecionada);
+                    Navigator.pop(context);
+                  }
+                },
+                child: const Text('Salvar'),
+              ),
+            ],
+          );
+        },
+      );
+    },
   );
 }

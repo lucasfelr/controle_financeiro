@@ -5,6 +5,7 @@ import 'nova_transacao_screen.dart'; // Importação que faltava!
 import 'detalhes_grupo_screen.dart';
 import 'relatorio_screen.dart';
 import '../provider/theme_provider.dart';
+import '../model/banco_de_dados.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -171,21 +172,47 @@ class DashboardScreen extends StatelessWidget {
                               );
                             },
                             onLongPress: () {
-                              showDialog(
+                              showModalBottomSheet(
                                 context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Deletar Grupo'),
-                                  content: Text('Tem certeza que deseja apagar o grupo "${grupo.nome}"? Isso removerá permanentemente todas as contas e gastos associados a ele.'),
-                                  actions: [
-                                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-                                    TextButton(
-                                      onPressed: () {
-                                        provider.deletarGrupo(grupo.id);
-                                        Navigator.pop(context);
-                                      },
-                                      child: const Text('Deletar', style: TextStyle(color: Colors.red)),
-                                    ),
-                                  ],
+                                builder: (context) => SafeArea(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ListTile(
+                                        leading: const Icon(Icons.edit, color: Colors.blue),
+                                        title: const Text('Editar Grupo'),
+                                        onTap: () {
+                                          Navigator.pop(context); // Fecha o menu
+                                          _abrirDialogEditarGrupo(context, grupo, provider);
+                                        },
+                                      ),
+                                      ListTile(
+                                        leading: const Icon(Icons.delete, color: Colors.red),
+                                        title: const Text('Deletar Grupo'),
+                                        onTap: () {
+                                          Navigator.pop(context); // Fecha o menu
+                                          // ... AQUI VOCÊ COLA AQUELE showDialog DE EXCLUSÃO QUE JÁ EXISTIA
+                                          showDialog(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: const Text('Deletar Grupo'),
+                                              content: Text('Tem certeza que deseja apagar o grupo "${grupo.nome}"?'),
+                                              actions: [
+                                                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+                                                TextButton(
+                                                  onPressed: () {
+                                                    provider.deletarGrupo(grupo.id);
+                                                    Navigator.pop(context);
+                                                  },
+                                                  child: const Text('Deletar', style: TextStyle(color: Colors.red)),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               );
                             },
@@ -212,4 +239,31 @@ class DashboardScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+void _abrirDialogEditarGrupo(BuildContext context, Grupo grupo, FinanceProvider provider) {
+  final nomeController = TextEditingController(text: grupo.nome);
+
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Editar Grupo'),
+      content: TextField(
+        controller: nomeController,
+        decoration: const InputDecoration(labelText: 'Nome do Grupo'),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+        ElevatedButton(
+          onPressed: () {
+            if (nomeController.text.isNotEmpty) {
+              provider.editarGrupo(grupo.id, nomeController.text);
+              Navigator.pop(context);
+            }
+          },
+          child: const Text('Salvar'),
+        ),
+      ],
+    ),
+  );
 }

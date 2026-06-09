@@ -46,6 +46,7 @@ class FinanceProvider extends ChangeNotifier {
     required TipoTransacao tipo,
     required double valor,
     required String tag,
+    DateTime? data,
   }) async {
     final novaTransacao = Transacao()
       ..contaId = contaId
@@ -53,7 +54,7 @@ class FinanceProvider extends ChangeNotifier {
       ..tipo = tipo
       ..valor = valor
       ..tag = tag
-      ..data = DateTime.now()
+      ..data = data ?? DateTime.now()
       ..isParcelada = false
       ..parcelaAtual = 1
       ..totalParcelas = 1;
@@ -202,6 +203,45 @@ class FinanceProvider extends ChangeNotifier {
   Future<void> deletarRelatorioSalvo(int id) async {
     await isar.writeTxn(() async {
       await isar.relatorioSalvos.delete(id);
+    });
+    await carregarDados();
+  }
+
+  // --- MÉTODOS DE EDIÇÃO ---
+
+  Future<void> editarGrupo(int id, String novoNome) async {
+    await isar.writeTxn(() async {
+      final grupo = await isar.grupos.get(id);
+      if (grupo != null) {
+        grupo.nome = novoNome;
+        await isar.grupos.put(grupo);
+      }
+    });
+    await carregarDados();
+  }
+
+  Future<void> editarConta(int id, String novoNome, double novoSaldo) async {
+    await isar.writeTxn(() async {
+      final conta = await isar.contas.get(id);
+      if (conta != null) {
+        conta.nome = novoNome;
+        conta.saldoInicial = novoSaldo;
+        await isar.contas.put(conta);
+      }
+    });
+    await carregarDados();
+  }
+
+  Future<void> editarTransacao(int id, String novoNome, double novoValor, String novaTag, DateTime novaData) async {
+    await isar.writeTxn(() async {
+      final transacao = await isar.transacaos.get(id);
+      if (transacao != null) {
+        transacao.nome = novoNome;
+        transacao.valor = novoValor;
+        transacao.tag = novaTag;
+        transacao.data = novaData; // <-- Atualizando a data no banco
+        await isar.transacaos.put(transacao);
+      }
     });
     await carregarDados();
   }
