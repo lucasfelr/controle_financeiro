@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // Importação adicionada
 import 'provider/finance_provider.dart';
 import 'provider/theme_provider.dart';
 import 'view/dashboard_screen.dart';
@@ -7,6 +8,8 @@ void main() async {
   // Garante que os bindings do Flutter estão prontos antes de chamar código assíncrono
   WidgetsFlutterBinding.ensureInitialized();
   
+  await dotenv.load(fileName: ".env"); // Carregando o .env
+
   final financeProvider = FinanceProvider();
   await financeProvider.initDB(); // Inicializa o Isar e carrega os dados
 

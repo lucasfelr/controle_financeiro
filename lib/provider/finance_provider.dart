@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import '../model/banco_de_dados.dart';
-import '../service/transacao_service.dart'; // O serviço de parcelas criado anteriormente
+import '../service/transacao_service.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // Importação adicionada
 
 class FinanceProvider extends ChangeNotifier {
   late Isar isar;
@@ -244,5 +248,85 @@ class FinanceProvider extends ChangeNotifier {
       }
     });
     await carregarDados();
+  }
+
+  Future<void> processarExtratoComIA(String caminhoImagem, int contaId) async {
+    final apiKey = dotenv.env['AI_API_KEY'];
+    if (apiKey == null || apiKey.isEmpty) {
+      throw Exception("API Key não configurada!");
+    }
+    final model = GenerativeModel(model: 'gemini-3.1-flash-lite', apiKey: apiKey); // Versão ajustada para uma disponível
+    try {
+      print('--- 1. INICIANDO LEITURA DA IA ---');
+      final bytesImagem = await File(caminhoImagem).readAsBytes();
+      final imagemParte = DataPart('image/jpeg', bytesImagem);
+      final prompt = TextPart(
+        "Analise esta imagem de extrato bancário. Retorne ESTRITAMENTE um array JSON contendo as transações. "
+        "Cada objeto deve ter: 'nome' (string), 'valor' (double total), 'tipo' (string 'gasto' ou 'deposito'), "
+        "'tag' (string curta categorizando), 'data' (string YYYY-MM-DD), 'isParcelada' (boolean), "
+        "e 'totalParcelas' (int, 1 se não for parcelada). "
+        "NÃO responda com crases, blocos de código ou qualquer outro texto. Apenas o array JSON puro."
+      );
+
+      final response = await model.generateContent([
+        Content.multi([prompt, imagemParte])
+      ]);
+
+      print('--- 2. RESPOSTA BRUTA DA IA ---');
+      print(response.text);
+
+      final textoPuro = (response.text ?? '[]')
+          .replaceAll('```json', '')
+          .replaceAll('```', '')
+          .trim();
+
+      print('--- 3. TEXTO LIMPO PARA O PARSER ---');
+      print(textoPuro);
+
+      final List<dynamic> transacoes = jsonDecode(textoPuro);
+      print('--- 4. TOTAL DE TRANSAÇÕES ENCONTRADAS: ${transacoes.length} ---');
+
+      for (var t in transacoes) {
+        DateTime dataParsed = DateTime.now();
+        if (t['data'] != null) {
+          try {
+            dataParsed = DateTime.parse(t['data']);
+          } catch (e) {
+             print('Erro ao converter a data: ${t['data']}');
+          }
+        }
+
+        bool isParcelada = (t['isParcelada'] ?? false) == true;
+        int totalParcelas = (t['totalParcelas'] ?? 1) as int;
+        if (totalParcelas < 1) totalParcelas = 1; // Trava de segurança
+
+        double valorTotal = (t['valor'] ?? 0.0).toDouble();
+        double valorParcela = isParcelada ? (valorTotal / totalParcelas) : valorTotal;
+        print('Salvando no banco: ${t['nome']} (Parcelado: $isParcelada, Valor da parcela: $valorParcela)');
+
+        for (int i = 0; i < totalParcelas; i++) {
+          DateTime dataParcela = DateTime(
+            dataParsed.year,
+            dataParsed.month + i,
+            dataParsed.day,
+          );
+
+          await adicionarTransacaoSimples(
+            contaId: contaId,
+            nome: isParcelada ? "${t['nome']} (${i + 1}/$totalParcelas)" : (t['nome'] ?? 'Lido por IA'),
+            tipo: t['tipo'] == 'deposito' ? TipoTransacao.deposito : TipoTransacao.gasto,
+            valor: valorParcela,
+            tag: t['tag'] ?? 'IA',
+            data: dataParcela,
+          );
+        }
+      }
+      print('--- 5. PROCESSO CONCLUÍDO ---');
+      
+    } catch (e) {
+      print('--- ERRO FATAL NA IA ---');
+      print(e);
+      rethrow; // Joga o erro de volta para a tela mostrar a barra vermelha
+    }
   }
 }

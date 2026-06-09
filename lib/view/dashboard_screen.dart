@@ -6,6 +6,8 @@ import 'detalhes_grupo_screen.dart';
 import 'relatorio_screen.dart';
 import '../provider/theme_provider.dart';
 import '../model/banco_de_dados.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -21,6 +23,13 @@ class DashboardScreen extends StatelessWidget {
         centerTitle: true,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.document_scanner, color: Colors.deepPurple),
+            tooltip: 'Importar extrato com IA',
+            onPressed: () {
+              _abrirSeletorContaParaIA(context, provider);
+            },
+          ),
           Consumer<ThemeProvider>(
             builder: (context, themeProvider, child) {
               return IconButton(
@@ -266,4 +275,98 @@ void _abrirDialogEditarGrupo(BuildContext context, Grupo grupo, FinanceProvider 
       ],
     ),
   );
+}
+
+// Abre um diálogo para o usuário escolher em qual conta os gastos do print serão inseridos
+void _abrirSeletorContaParaIA(BuildContext telaContext, FinanceProvider provider) {
+  if (provider.contas.isEmpty) {
+    ScaffoldMessenger.of(telaContext).showSnackBar(
+      const SnackBar(content: Text('Cadastre pelo menos uma conta primeiro!')),
+    );
+    return;
+  }
+
+  showDialog(
+    context: telaContext,
+    // Mude o nome interno para "dialogContext"
+    builder: (dialogContext) => AlertDialog( 
+      title: const Text('Importar para qual conta?'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: ListView.builder(
+          shrinkWrap: true,
+          itemCount: provider.contas.length,
+          itemBuilder: (context, index) {
+            final conta = provider.contas[index];
+            return ListTile(
+              leading: const Icon(Icons.account_balance_wallet),
+              title: Text(conta.nome),
+              onTap: () async {
+                Navigator.pop(dialogContext); // Fecha o diálogo
+                
+                // Usa o 'telaContext' que não foi destruído
+                await _processarImagemDashboard(telaContext, provider, conta.id); 
+              },
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Cancelar'),
+        ),
+      ],
+    ),
+  );
+}
+
+// Abre a galeria e envia o print para a API do Gemini
+Future<void> _processarImagemDashboard(BuildContext context, FinanceProvider provider, int contaId) async {
+  final picker = ImagePicker();
+  final xfile = await picker.pickImage(source: ImageSource.gallery);
+  
+  if (xfile == null) return;
+
+  if (!context.mounted) return;
+
+  // Modal de carregamento
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => const Center(
+      child: Card(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('A IA está lendo o comprovante...'),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+
+  try {
+    // Como a lógica já está centralizada no Provider, ela funciona perfeitamente daqui também!
+    await provider.processarExtratoComIA(xfile.path, contaId);
+
+    if (!context.mounted) return;
+    
+    Navigator.pop(context); // Fecha o carregamento
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Transações importadas com sucesso!'), backgroundColor: Colors.green),
+    );
+  } catch (e) {
+    if (!context.mounted) return;
+    Navigator.pop(context); // Fecha o carregamento em caso de erro
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Erro ao processar imagem: $e'), backgroundColor: Colors.red),
+    );
+  }
 }

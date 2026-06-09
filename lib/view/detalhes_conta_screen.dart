@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../provider/finance_provider.dart';
 import '../model/banco_de_dados.dart';
 import 'nova_transacao_screen.dart';
+import 'package:image_picker/image_picker.dart';
 
 class DetalhesContaScreen extends StatelessWidget {
   final Conta conta;
@@ -121,15 +122,45 @@ class DetalhesContaScreen extends StatelessWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        tooltip: 'Adicionar Transação nesta conta',
+        tooltip: 'Adicionar Transação',
         child: const Icon(Icons.add),
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => NovaTransacaoScreen(
-                financeProvider: provider,
-                contaId: conta.id, // <-- Passando o ID da conta atual
+          // O "context" aqui é o da tela principal. Vamos usá-lo depois.
+          showModalBottomSheet(
+            context: context,
+            // Mude o nome do contexto do builder para "sheetContext"
+            builder: (sheetContext) => SafeArea( 
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.edit, color: Colors.blue),
+                    title: const Text('Digitar Manualmente'),
+                    onTap: () {
+                      Navigator.pop(sheetContext); // Fecha usando o contexto do sheet
+                      Navigator.push(
+                        context, // Abre a nova tela usando o contexto da tela principal
+                        MaterialPageRoute(
+                          builder: (context) => NovaTransacaoScreen(
+                            financeProvider: provider,
+                            contaId: conta.id,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.document_scanner, color: Colors.deepPurple),
+                    title: const Text('Ler de um Print (IA)'),
+                    subtitle: const Text('Gera múltiplas transações automáticas'),
+                    onTap: () async {
+                      Navigator.pop(sheetContext); // Fecha o menu inferior
+                      
+                      // Passa o 'context' original da tela, que continuará vivo!
+                      await _processarImagem(context, provider, conta.id); 
+                    },
+                  ),
+                ],
               ),
             ),
           );
@@ -242,4 +273,56 @@ void _abrirDialogEditarTransacao(BuildContext context, Transacao t, FinanceProvi
       );
     },
   );
+}
+
+Future<void> _processarImagem(BuildContext context, FinanceProvider provider, int contaId) async {
+  final picker = ImagePicker();
+  // Abre a galeria nativa do celular
+  final xfile = await picker.pickImage(source: ImageSource.gallery);
+  
+  if (xfile == null) return; // O usuário cancelou a escolha da foto
+
+  if (!context.mounted) return;
+
+  // Exibe um modal de carregamento para a tela não ficar travada
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => const Center(
+      child: Card(
+        // --- CORREÇÃO AQUI: Usando o widget Padding dentro do Card ---
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('A IA está lendo o comprovante...'),
+            ],
+          ),
+        ),
+        // --------------------------------------------------------------
+      ),
+    ),
+  );
+
+  try {
+    await provider.processarExtratoComIA(xfile.path, contaId);
+
+    if (!context.mounted) return;
+    
+    // Fecha o carregamento
+    Navigator.pop(context); 
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Transações importadas com sucesso!'), backgroundColor: Colors.green),
+    );
+  } catch (e) {
+    if (!context.mounted) return;
+    Navigator.pop(context); // Fecha o carregamento em caso de erro
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Erro ao processar imagem: $e'), backgroundColor: Colors.red),
+    );
+  }
 }
