@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'provider/finance_provider.dart';
-import 'view/dashboard_screen.dart'; // Ajuste o caminho conforme seu projeto
-
+import 'provider/theme_provider.dart';
+import 'view/dashboard_screen.dart';
 void main() async {
   // Garante que os bindings do Flutter estão prontos antes de chamar código assíncrono
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,8 +11,11 @@ void main() async {
   await financeProvider.initDB(); // Inicializa o Isar e carrega os dados
 
   runApp(
-    ChangeNotifierProvider.value(
-      value: financeProvider,
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: financeProvider),
+        ChangeNotifierProvider(create: (context) => ThemeProvider()),
+      ],
       child: const MeuAppFinanceiro(),
     ),
   );
@@ -23,10 +26,18 @@ class MeuAppFinanceiro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
     return MaterialApp(
-      title: 'Controle de Finanças',
+      title: 'Financeiro',
+      themeMode: themeProvider.themeMode,
       theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
+        colorSchemeSeed: Colors.deepPurple,
+        brightness: Brightness.light,
+        useMaterial3: true,
+      ),
+      darkTheme: ThemeData(
+        colorSchemeSeed: Colors.deepPurple,
+        brightness: Brightness.dark, // A mágica acontece aqui
         useMaterial3: true,
       ),
       home: const DashboardScreen(),

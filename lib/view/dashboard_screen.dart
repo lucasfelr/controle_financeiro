@@ -4,6 +4,7 @@ import '../provider/finance_provider.dart';
 import 'nova_transacao_screen.dart'; // Importação que faltava!
 import 'detalhes_grupo_screen.dart';
 import 'relatorio_screen.dart';
+import '../provider/theme_provider.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -19,6 +20,18 @@ class DashboardScreen extends StatelessWidget {
         centerTitle: true,
         elevation: 0,
         actions: [
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+              return IconButton(
+                icon: Icon(themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode),
+                tooltip: 'Alternar Tema',
+                onPressed: () {
+                  // Inverte o estado atual
+                  themeProvider.toggleTheme(!themeProvider.isDarkMode);
+                },
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.pie_chart),
             tooltip: 'Relatórios',
