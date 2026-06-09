@@ -1,0 +1,18 @@
+allprojects {
+    afterEvaluate { project ->
+        if (project.name == "isar_flutter_libs") {
+            def android = project.extensions.findByName("android")
+            if (android) {
+                // Remove o atributo 'package' do manifest se ele existir
+                def manifestFile = file("${project.projectDir}/src/main/AndroidManifest.xml")
+                if (manifestFile.exists()) {
+                    def content = manifestFile.getText('UTF-8')
+                    content = content.replaceAll('package="[^"]*"', '')
+                    manifestFile.write(content, 'UTF-8')
+                }
+                // Define o namespace
+                android.namespace = "dev.isar.android"
+            }
+        }
+    }
+}
