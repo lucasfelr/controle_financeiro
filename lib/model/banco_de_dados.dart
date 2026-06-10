@@ -14,6 +14,8 @@ class Conta {
   late int grupoId; // Referência ao ID do Grupo
   late String nome;
   late double saldoInicial;
+  late bool isCredito; // Nova flag: true para Crédito, false para Débito
+  double? limiteCredito; // Opcional, usado apenas se isCredito for true
 }
 
 enum TipoTransacao { deposito, gasto }

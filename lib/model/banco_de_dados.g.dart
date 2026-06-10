@@ -434,13 +434,23 @@ const ContaSchema = CollectionSchema(
       name: r'grupoId',
       type: IsarType.long,
     ),
-    r'nome': PropertySchema(
+    r'isCredito': PropertySchema(
       id: 1,
+      name: r'isCredito',
+      type: IsarType.bool,
+    ),
+    r'limiteCredito': PropertySchema(
+      id: 2,
+      name: r'limiteCredito',
+      type: IsarType.double,
+    ),
+    r'nome': PropertySchema(
+      id: 3,
       name: r'nome',
       type: IsarType.string,
     ),
     r'saldoInicial': PropertySchema(
-      id: 2,
+      id: 4,
       name: r'saldoInicial',
       type: IsarType.double,
     )
@@ -476,8 +486,10 @@ void _contaSerialize(
   Map<Type, List<int>> allOffsets,
 ) {
   writer.writeLong(offsets[0], object.grupoId);
-  writer.writeString(offsets[1], object.nome);
-  writer.writeDouble(offsets[2], object.saldoInicial);
+  writer.writeBool(offsets[1], object.isCredito);
+  writer.writeDouble(offsets[2], object.limiteCredito);
+  writer.writeString(offsets[3], object.nome);
+  writer.writeDouble(offsets[4], object.saldoInicial);
 }
 
 Conta _contaDeserialize(
@@ -489,8 +501,10 @@ Conta _contaDeserialize(
   final object = Conta();
   object.grupoId = reader.readLong(offsets[0]);
   object.id = id;
-  object.nome = reader.readString(offsets[1]);
-  object.saldoInicial = reader.readDouble(offsets[2]);
+  object.isCredito = reader.readBool(offsets[1]);
+  object.limiteCredito = reader.readDoubleOrNull(offsets[2]);
+  object.nome = reader.readString(offsets[3]);
+  object.saldoInicial = reader.readDouble(offsets[4]);
   return object;
 }
 
@@ -504,8 +518,12 @@ P _contaDeserializeProp<P>(
     case 0:
       return (reader.readLong(offset)) as P;
     case 1:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 2:
+      return (reader.readDoubleOrNull(offset)) as P;
+    case 3:
+      return (reader.readString(offset)) as P;
+    case 4:
       return (reader.readDouble(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -700,6 +718,94 @@ extension ContaQueryFilter on QueryBuilder<Conta, Conta, QFilterCondition> {
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Conta, Conta, QAfterFilterCondition> isCreditoEqualTo(
+      bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isCredito',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Conta, Conta, QAfterFilterCondition> limiteCreditoIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'limiteCredito',
+      ));
+    });
+  }
+
+  QueryBuilder<Conta, Conta, QAfterFilterCondition> limiteCreditoIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'limiteCredito',
+      ));
+    });
+  }
+
+  QueryBuilder<Conta, Conta, QAfterFilterCondition> limiteCreditoEqualTo(
+    double? value, {
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'limiteCredito',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<Conta, Conta, QAfterFilterCondition> limiteCreditoGreaterThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'limiteCredito',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<Conta, Conta, QAfterFilterCondition> limiteCreditoLessThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'limiteCredito',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<Conta, Conta, QAfterFilterCondition> limiteCreditoBetween(
+    double? lower,
+    double? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'limiteCredito',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        epsilon: epsilon,
       ));
     });
   }
@@ -912,6 +1018,30 @@ extension ContaQuerySortBy on QueryBuilder<Conta, Conta, QSortBy> {
     });
   }
 
+  QueryBuilder<Conta, Conta, QAfterSortBy> sortByIsCredito() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isCredito', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Conta, Conta, QAfterSortBy> sortByIsCreditoDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isCredito', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Conta, Conta, QAfterSortBy> sortByLimiteCredito() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'limiteCredito', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Conta, Conta, QAfterSortBy> sortByLimiteCreditoDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'limiteCredito', Sort.desc);
+    });
+  }
+
   QueryBuilder<Conta, Conta, QAfterSortBy> sortByNome() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'nome', Sort.asc);
@@ -962,6 +1092,30 @@ extension ContaQuerySortThenBy on QueryBuilder<Conta, Conta, QSortThenBy> {
     });
   }
 
+  QueryBuilder<Conta, Conta, QAfterSortBy> thenByIsCredito() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isCredito', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Conta, Conta, QAfterSortBy> thenByIsCreditoDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isCredito', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Conta, Conta, QAfterSortBy> thenByLimiteCredito() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'limiteCredito', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Conta, Conta, QAfterSortBy> thenByLimiteCreditoDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'limiteCredito', Sort.desc);
+    });
+  }
+
   QueryBuilder<Conta, Conta, QAfterSortBy> thenByNome() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'nome', Sort.asc);
@@ -994,6 +1148,18 @@ extension ContaQueryWhereDistinct on QueryBuilder<Conta, Conta, QDistinct> {
     });
   }
 
+  QueryBuilder<Conta, Conta, QDistinct> distinctByIsCredito() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isCredito');
+    });
+  }
+
+  QueryBuilder<Conta, Conta, QDistinct> distinctByLimiteCredito() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'limiteCredito');
+    });
+  }
+
   QueryBuilder<Conta, Conta, QDistinct> distinctByNome(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1018,6 +1184,18 @@ extension ContaQueryProperty on QueryBuilder<Conta, Conta, QQueryProperty> {
   QueryBuilder<Conta, int, QQueryOperations> grupoIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'grupoId');
+    });
+  }
+
+  QueryBuilder<Conta, bool, QQueryOperations> isCreditoProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isCredito');
+    });
+  }
+
+  QueryBuilder<Conta, double?, QQueryOperations> limiteCreditoProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'limiteCredito');
     });
   }
 

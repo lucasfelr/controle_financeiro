@@ -106,41 +106,75 @@ class DetalhesGrupoScreen extends StatelessWidget {
             builder: (context) {
               final nomeController = TextEditingController();
               final saldoController = TextEditingController();
-              return AlertDialog(
-                title: Text('Nova Conta em ${grupo.nome}'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: nomeController,
-                      decoration: const InputDecoration(hintText: 'Nome da Conta'),
+              final limiteController = TextEditingController();
+              bool isCredito = false;
+              return StatefulBuilder(
+                builder: (context, setState) {
+                  return AlertDialog(
+                    title: Text('Nova Conta em ${grupo.nome}'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          controller: nomeController,
+                          decoration: const InputDecoration(hintText: 'Nome da Conta'),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: saldoController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: const InputDecoration(hintText: 'Saldo Inicial (R\$)'),
+                        ),
+                        // Novo switch para definir se a conta é de crédito ou débito
+                        SwitchListTile(
+                          title: const Text('É cartão de crédito?'),
+                          value: isCredito,
+                          onChanged: (val) {
+                            setState(() {
+                              isCredito = val;
+                              // Limpa o limite se desabilitar o crédito
+                              if (!isCredito) {
+                                limiteController.clear();
+                              }
+                            });
+                          },
+                        ),
+                        // Campo de limite só aparece se for crédito
+                        if (isCredito)
+                          TextField(
+                            controller: limiteController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(hintText: 'Limite do Cartão (R\$)'),
+                          ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: saldoController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(hintText: 'Saldo Inicial (R\$)'),
-                    ),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (nomeController.text.isNotEmpty) {
-                        final saldo = double.tryParse(saldoController.text) ?? 0.0;
-                        // Como você não está em um Widget com context fixo (dialog),
-                        // acessamos o provider via read() para evitar erros
-                        context.read<FinanceProvider>().adicionarConta(nomeController.text, grupo.id, saldo);
-                        Navigator.pop(context);
-                      }
-                    },
-                    child: const Text('Salvar'),
-                  ),
-                ],
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancelar'),
+                      ),
+                      // ADICIONADO: ElevatedButton que estava faltando envolvendo o onPressed
+                      ElevatedButton(
+                        onPressed: () {
+                          if (nomeController.text.isNotEmpty) {
+                            final saldo = double.tryParse(saldoController.text) ?? 0.0;
+                            final limite = double.tryParse(limiteController.text);
+                            // Passando os argumentos corretamente para adicionarConta
+                            context.read<FinanceProvider>().adicionarConta(
+                              nomeController.text,
+                              grupo.id,
+                              saldo,
+                              isCredito, // Argumento posicional para isCredito
+                              isCredito ? limite : null, // Argumento posicional para limiteCredito, null se não for crédito
+                            );
+                            Navigator.pop(context);
+                          }
+                        },
+                        child: const Text('Salvar'),
+                      ),
+                    ],
+                  );
+                }
               );
             },
           );

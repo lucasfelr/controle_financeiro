@@ -181,15 +181,15 @@ class _NovaTransacaoScreenState extends State<NovaTransacaoScreen> {
                     child: OutlinedButton.icon(
                       onPressed: _escolherData,
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
                         alignment: Alignment.centerLeft,
                       ),
-                      icon: const Icon(Icons.calendar_today),
+                      icon: const Icon(Icons.calendar_today, size: 20),
                       label: Text(
                         _dataSelecionada == null
                             ? 'Data: Hoje (Automática)'
-                            : 'Data: ${_dataSelecionada!.day}/${_dataSelecionada!.month}/${_dataSelecionada!.year}',
-                        style: const TextStyle(fontSize: 15),
+                            : 'Data: ${_dataSelecionada!.day.toString().padLeft(2, '0')}/${_dataSelecionada!.month.toString().padLeft(2, '0')}/${_dataSelecionada!.year}',
+                        style: const TextStyle(fontSize: 14),
                       ),
                     ),
                   ),

@@ -70,11 +70,13 @@ class FinanceProvider extends ChangeNotifier {
   }
 
   // Salva uma nova conta vinculada a um grupo
-  Future<void> adicionarConta(String nome, int grupoId, double saldoInicial) async {
+  Future<void> adicionarConta(String nome, int grupoId, double saldoInicial, bool isCredito, double? limiteCredito) async {
     final novaConta = Conta()
       ..nome = nome
       ..grupoId = grupoId
-      ..saldoInicial = saldoInicial;
+      ..saldoInicial = saldoInicial
+      ..isCredito = isCredito
+      ..limiteCredito = limiteCredito;
 
     await isar.writeTxn(() async {
       await isar.contas.put(novaConta);
@@ -123,19 +125,28 @@ class FinanceProvider extends ChangeNotifier {
     final conta = _contas.cast<Conta?>().firstWhere((c) => c?.id == contaId, orElse: () => null);
     if (conta == null) return 0.0;
 
-    double saldo = conta.saldoInicial;
-    for (var t in _transacoes.where((t) => t.contaId == contaId)) {
-      saldo += (t.tipo == TipoTransacao.deposito) ? t.valor : -t.valor;
+    // Se for crédito, o "saldo" é o valor que já foi gasto no cartão,
+    // que é a soma de todos os gastos daquela conta.
+    if (conta.isCredito) {
+      return _transacoes
+          .where((t) => t.contaId == contaId && t.tipo == TipoTransacao.gasto)
+          .fold(0.0, (soma, t) => soma + t.valor);
     }
-    return saldo;
+
+    // Se for débito, o saldo é Saldo Inicial + Depósitos - Gastos
+    double total = conta.saldoInicial;
+    for (var t in _transacoes.where((t) => t.contaId == contaId)) {
+      total += (t.tipo == TipoTransacao.deposito) ? t.valor : -t.valor;
+    }
+    return total;
   }
 
   double calcularSaldoGrupo(int grupoId) {
     double total = 0.0;
     final contasDoGrupo = _contas.where((c) => c.grupoId == grupoId);
-    for (var conta in contasDoGrupo) {
+      for (var conta in contasDoGrupo) {
       total += calcularSaldoConta(conta.id);
-    }
+      }
     return total;
   }
 
@@ -147,6 +158,14 @@ class FinanceProvider extends ChangeNotifier {
   Future<void> deletarTransacao(int id) async {
     await isar.writeTxn(() async {
       await isar.transacaos.delete(id);
+    });
+    await carregarDados();
+  }
+
+  // Novo método para deletar múltiplas transações
+  Future<void> deletarMultiplasTransacoes(List<int> ids) async {
+    await isar.writeTxn(() async {
+      await isar.transacaos.deleteAll(ids);
     });
     await carregarDados();
   }
@@ -167,13 +186,13 @@ class FinanceProvider extends ChangeNotifier {
     await isar.writeTxn(() async {
       // 1. Busca todas as contas que pertencem a este grupo
       final contasDoGrupo = await isar.contas.filter().grupoIdEqualTo(id).findAll();
-      
+
       // 2. Para cada conta, apaga suas transações e depois a própria conta
       for (var conta in contasDoGrupo) {
         await isar.transacaos.filter().contaIdEqualTo(conta.id).deleteAll();
         await isar.contas.delete(conta.id);
       }
-      
+
       // 3. Por fim, apaga o grupo
       await isar.grupos.delete(id);
     });
@@ -196,7 +215,6 @@ class FinanceProvider extends ChangeNotifier {
       ..tagsNomes = gastosPorTag.keys.toList()
       ..tagsValores = gastosPorTag.values.toList()
       ..dataCriacao = DateTime.now();
-
     await isar.writeTxn(() async {
       await isar.relatorioSalvos.put(novoRelatorio);
     });
@@ -209,7 +227,7 @@ class FinanceProvider extends ChangeNotifier {
       await isar.relatorioSalvos.delete(id);
     });
     await carregarDados();
-  }
+    }
 
   // --- MÉTODOS DE EDIÇÃO ---
 
@@ -265,7 +283,7 @@ class FinanceProvider extends ChangeNotifier {
         "Cada objeto deve ter: 'nome' (string), 'valor' (double total), 'tipo' (string 'gasto' ou 'deposito'), "
         "'tag' (string curta categorizando), 'data' (string YYYY-MM-DD), 'isParcelada' (boolean), "
         "e 'totalParcelas' (int, 1 se não for parcelada). "
-        "NÃO responda com crases, blocos de código ou qualquer outro texto. Apenas o array JSON puro."
+        "NÃO responda with crases, blocos de código ou qualquer outro texto. Apenas o array JSON puro."
       );
 
       final response = await model.generateContent([
@@ -326,7 +344,7 @@ class FinanceProvider extends ChangeNotifier {
     } catch (e) {
       print('--- ERRO FATAL NA IA ---');
       print(e);
-      rethrow; // Joga o erro de volta para a tela mostrar a barra vermelha
+      rethrow; // Joga o error de volta para a tela mostrar a barra vermelha
     }
   }
 }
