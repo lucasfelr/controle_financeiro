@@ -70,13 +70,13 @@ class FinanceProvider extends ChangeNotifier {
   }
 
   // Salva uma nova conta vinculada a um grupo
-  Future<void> adicionarConta(String nome, int grupoId, double saldoInicial, bool isCredito, double? limiteCredito) async {
+  Future<void> adicionarConta(String nome, int grupoId, double saldoInicial, [bool isCredito = false, double? limiteCredito]) async {
     final novaConta = Conta()
       ..nome = nome
       ..grupoId = grupoId
       ..saldoInicial = saldoInicial
-      ..isCredito = isCredito
-      ..limiteCredito = limiteCredito;
+      ..isCredito = isCredito // Adicionando o status de crédito
+      ..limiteCredito = limiteCredito; // Adicionando o limite
 
     await isar.writeTxn(() async {
       await isar.contas.put(novaConta);
@@ -242,12 +242,16 @@ class FinanceProvider extends ChangeNotifier {
     await carregarDados();
   }
 
-  Future<void> editarConta(int id, String novoNome, double novoSaldo) async {
+// Edita uma conta existente
+  Future<void> editarConta(int id, String novoNome, double novoSaldo, [bool isCredito = false, double? limiteCredito]) async {
     await isar.writeTxn(() async {
       final conta = await isar.contas.get(id);
       if (conta != null) {
         conta.nome = novoNome;
         conta.saldoInicial = novoSaldo;
+        conta.isCredito = isCredito; // Atualizando o status de crédito
+        conta.limiteCredito = limiteCredito; // Atualizando o limite
+        
         await isar.contas.put(conta);
       }
     });

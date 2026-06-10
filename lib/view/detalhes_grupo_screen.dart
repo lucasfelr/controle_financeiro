@@ -189,36 +189,79 @@ class DetalhesGrupoScreen extends StatelessWidget {
 void _abrirDialogEditarConta(BuildContext context, Conta conta, FinanceProvider provider) {
   final nomeController = TextEditingController(text: conta.nome);
   final saldoController = TextEditingController(text: conta.saldoInicial.toString());
+  // Se existir um limite de crédito salvo, preenche o campo. Caso contrário, deixa vazio.
+  final limiteController = TextEditingController(text: conta.limiteCredito?.toString() ?? '');
+  
+  // Carrega o estado atual da conta
+  bool isCredito = conta.isCredito;
 
   showDialog(
     context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Editar Conta'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(controller: nomeController, decoration: const InputDecoration(labelText: 'Nome da Conta')),
-          const SizedBox(height: 8),
-          TextField(
-            controller: saldoController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'Saldo Inicial (R\$)'),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-        ElevatedButton(
-          onPressed: () {
-            if (nomeController.text.isNotEmpty) {
-              final novoSaldo = double.tryParse(saldoController.text) ?? conta.saldoInicial;
-              provider.editarConta(conta.id, nomeController.text, novoSaldo);
-              Navigator.pop(context);
-            }
-          },
-          child: const Text('Salvar'),
-        ),
-      ],
-    ),
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Editar Conta'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nomeController, 
+                  decoration: const InputDecoration(labelText: 'Nome da Conta')
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: saldoController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(labelText: 'Saldo Inicial (R\$)'),
+                ),
+                // Switch para alternar para cartão de crédito
+                SwitchListTile(
+                  title: const Text('É cartão de crédito?'),
+                  value: isCredito,
+                  onChanged: (val) {
+                    setState(() {
+                      isCredito = val;
+                      if (!isCredito) {
+                        limiteController.clear();
+                      }
+                    });
+                  },
+                ),
+                // Campo de limite só aparece se o switch estiver ativo
+                if (isCredito)
+                  TextField(
+                    controller: limiteController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Limite do Cartão (R\$)'),
+                  ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+              ElevatedButton(
+                onPressed: () {
+                  if (nomeController.text.isNotEmpty) {
+                    final novoSaldo = double.tryParse(saldoController.text) ?? conta.saldoInicial;
+                    final novoLimite = double.tryParse(limiteController.text);
+                    
+                    // Passa os novos parâmetros de crédito para o provider
+                    provider.editarConta(
+                      conta.id, 
+                      nomeController.text, 
+                      novoSaldo, 
+                      isCredito, 
+                      isCredito ? novoLimite : null
+                    );
+                    Navigator.pop(context);
+                  }
+                },
+                child: const Text('Salvar'),
+              ),
+            ],
+          );
+        }
+      );
+    },
   );
 }
