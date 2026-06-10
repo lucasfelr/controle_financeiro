@@ -124,16 +124,7 @@ class FinanceProvider extends ChangeNotifier {
   double calcularSaldoConta(int contaId) {
     final conta = _contas.cast<Conta?>().firstWhere((c) => c?.id == contaId, orElse: () => null);
     if (conta == null) return 0.0;
-
-    // Se for crédito, o "saldo" é o valor que já foi gasto no cartão,
-    // que é a soma de todos os gastos daquela conta.
-    if (conta.isCredito) {
-      return _transacoes
-          .where((t) => t.contaId == contaId && t.tipo == TipoTransacao.gasto)
-          .fold(0.0, (soma, t) => soma + t.valor);
-    }
-
-    // Se for débito, o saldo é Saldo Inicial + Depósitos - Gastos
+    
     double total = conta.saldoInicial;
     for (var t in _transacoes.where((t) => t.contaId == contaId)) {
       total += (t.tipo == TipoTransacao.deposito) ? t.valor : -t.valor;

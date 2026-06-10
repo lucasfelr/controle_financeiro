@@ -37,7 +37,9 @@ class DetalhesGrupoScreen extends StatelessWidget {
                     leading: const Icon(Icons.account_balance_wallet),
                     title: Text(conta.nome, style: const TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Text(
-                      'Saldo: R\$ ${saldoConta.toStringAsFixed(2)}',
+                      conta.isCredito 
+                        ? 'Limite: R\$ ${saldoConta.toStringAsFixed(2)}'
+                        : 'Saldo: R\$ ${saldoConta.toStringAsFixed(2)}',
                       style: TextStyle(color: saldoConta >= 0 ? Colors.green : Colors.red),
                     ),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),

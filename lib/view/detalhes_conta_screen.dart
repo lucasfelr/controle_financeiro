@@ -5,7 +5,6 @@ import '../model/banco_de_dados.dart';
 import 'nova_transacao_screen.dart';
 import 'package:image_picker/image_picker.dart';
 
-// Mude de StatelessWidget para StatefulWidget
 class DetalhesContaScreen extends StatefulWidget {
   final Conta conta;
 
@@ -26,20 +25,20 @@ class _DetalhesContaScreenState extends State<DetalhesContaScreen> {
     
     // Busca as transações desta conta e ordena da mais recente para a mais antiga
     final transacoesDaConta = provider.transacoes
-        .where((t) => t.contaId == widget.conta.id) // Use widget.conta
+        .where((t) => t.contaId == widget.conta.id) 
         .toList()
       ..sort((a, b) => b.data.compareTo(a.data));
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.conta.nome), // Use widget.conta
-      actions: [
-            IconButton(
+        title: Text(widget.conta.nome), 
+        actions: [
+          IconButton(
             icon: const Icon(Icons.document_scanner, color: Colors.deepPurple),
             tooltip: 'Importar extrato com IA',
-          onPressed: () {
+            onPressed: () {
               _processarImagem(context, provider, widget.conta.id);
-                    },
+            },
           ),
           if (_isSelectionMode) // Só mostra o botão se o modo de seleção estiver ativo
             IconButton(
@@ -55,204 +54,56 @@ class _DetalhesContaScreenState extends State<DetalhesContaScreen> {
                       _isSelectionMode = false;
                       _selectedTransactionIds.clear();
                     });
+                  },
+                );
               },
-          );
-        },
-        ),
+            ),
           if (_isSelectionMode) // Botão para cancelar seleção
             IconButton(
               icon: const Icon(Icons.cancel),
-          onPressed: () {
+              onPressed: () {
                 setState(() {
                   _isSelectionMode = false;
                   _selectedTransactionIds.clear();
                 });
-          },
+              },
             )
           else // Botão para ativar modo de seleção
             IconButton(
               icon: const Icon(Icons.checklist),
-                onPressed: () {
+              onPressed: () {
                 setState(() {
                   _isSelectionMode = true;
                 });
-                },
-              ),
-            ],
-    ),
+              },
+            ),
+        ],
+      ),
       body: Column(
-            children: [
-          // Header com o Saldo Atual
+        children: [
+          // Header com o Saldo Atual (Atualizado para Contas de Crédito)
           Container(
             padding: const EdgeInsets.all(20),
-            color: Theme.of(context).primaryColorLight,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.deepPurple[900]?.withOpacity(0.2)
+                : Theme.of(context).primaryColorLight,
             width: double.infinity,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             child: Column(
-          children: [
-
-
-
-
-
-
-
+              children: [
                 Text(
-                  widget.conta.isCredito ? 'Fatura Atual' : 'Saldo Atual',
+                  // Modificado para exibir 'Limite' em contas de crédito
+                  widget.conta.isCredito ? 'Limite' : 'Saldo Atual',
                   style: const TextStyle(fontSize: 16),
                 ),
                 Text(
-                  widget.conta.isCredito
-                      ? 'R\$ ${provider.calcularSaldoConta(widget.conta.id).toStringAsFixed(2)} / R\$ ${(widget.conta.limiteCredito ?? 0).toStringAsFixed(2)}'
-                      : 'R\$ ${provider.calcularSaldoConta(widget.conta.id).toStringAsFixed(2)}',
+                  // A lógica do valor calculado permanece 100% idêntica à de débito
+                  'R\$ ${provider.calcularSaldoConta(widget.conta.id).toStringAsFixed(2)}',
                   style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
+                ),
+              ],
             ),
-
-
-
-
-
-
-
-
-
-
-
-
-
-                if (widget.conta.isCredito)
-                  Text(
-                    'Disponível: R\$ ${((widget.conta.limiteCredito ?? 0) - provider.calcularSaldoConta(widget.conta.id)).toStringAsFixed(2)}',
-                    style: const TextStyle(fontSize: 14, color: Colors.black54),
-                  ),
-          ],
-        ),
-      ),
-
+          ),
 
           // Lista de Transações
           Expanded(
@@ -279,124 +130,33 @@ class _DetalhesContaScreenState extends State<DetalhesContaScreen> {
                                       _selectedTransactionIds.add(t.id);
                                     } else {
                                       _selectedTransactionIds.remove(t.id);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                                    }
                                   });
-          },
-
+                                },
                               )
                             : CircleAvatar(
                                 backgroundColor: isGasto ? Colors.red[100] : Colors.green[100],
                                 child: Icon(
                                   isGasto ? Icons.remove_circle_outline : Icons.add_circle_outline,
                                   color: isGasto ? Colors.red : Colors.green,
-        ),
-
-      ),
-
+                                ),
+                              ),
                         title: Text(
                           t.nome.isNotEmpty ? t.nome : 'Transação sem nome',
                           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-    ),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                        ),
                         subtitle: Text(
                           '${t.data.day.toString().padLeft(2, '0')}/${t.data.month.toString().padLeft(2, '0')}/${t.data.year}$infoParcela\nTag: ${t.tag}',
-                  ),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                        ),
                         isThreeLine: true,
-
                         trailing: Text(
                           '${isGasto ? "-" : "+"} R\$ ${t.valor.toStringAsFixed(2)}',
                           style: TextStyle(
                             color: isGasto ? Colors.red : Colors.green,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
-                    ),
-                  ),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                          ),
+                        ),
                         onLongPress: () {
                           // Se o modo de seleção estiver ativo, o long press seleciona/desseleciona
                           if (_isSelectionMode) {
@@ -423,40 +183,12 @@ class _DetalhesContaScreenState extends State<DetalhesContaScreen> {
                             });
                           }
                         },
-          );
-        },
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                      );
+                    },
+                  ),
           ),
-        ),
-
         ],
-    ),
+      ),
       floatingActionButton: FloatingActionButton(
         tooltip: 'Adicionar Transação',
         child: const Icon(Icons.add),
@@ -475,22 +207,10 @@ class _DetalhesContaScreenState extends State<DetalhesContaScreen> {
                 contaId: widget.conta.id,
               ),
             ),
-  );
-
-
-
-
-
-
-
-
-
-
+          );
         },
       ),
     );
-
-
   }
 
   // Novo método para exibir opções de transação (editar/deletar)
@@ -505,9 +225,7 @@ class _DetalhesContaScreenState extends State<DetalhesContaScreen> {
               leading: const Icon(Icons.edit, color: Colors.blue),
               title: const Text('Editar Transação'),
               onTap: () {
-    Navigator.pop(context);
-
-
+                Navigator.pop(context);
                 _abrirDialogEditarTransacao(context, t, provider);
               },
             ),
@@ -521,7 +239,7 @@ class _DetalhesContaScreenState extends State<DetalhesContaScreen> {
                   titulo: 'Deletar Transação',
                   mensagem: 'Tem certeza que deseja apagar "${t.nome}"?',
                   onConfirmar: () => provider.deletarTransacao(t.id),
-    );
+                );
               },
             ),
           ],
